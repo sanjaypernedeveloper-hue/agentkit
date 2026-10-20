@@ -1,12 +1,13 @@
 ---
 id: STR-000
 title: ""
-status: TODO            # TODO | IN_PROGRESS | IN_REVIEW | COMPLETED | BACKLOGGED | BLOCKED
+status: TODO            # TODO | IN_PROGRESS | IN_VISUAL_QA | IN_REVIEW | COMPLETED | BACKLOGGED | BLOCKED
 type: feature           # feature | fix
 parent: null            # parent story id (fix stories only)
 attempt: 0              # 0 for the original story; k for fix story STR-000.k
 depends_on: []          # story ids that must be COMPLETED first
 design_ref: ""          # design doc section(s) this story implements, e.g. "§9.2 One avatar per guest"
+ui: false               # true when the story changes what users see (triggers visual QA when enabled)
 questions: []           # QUESTIONS.md ids this story is waiting on (story is BLOCKED while any is open)
 base_commit: null       # set by the orchestrator when the story moves to IN_PROGRESS
 ---

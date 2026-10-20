@@ -33,7 +33,11 @@ Arguments (optional design doc paths): $ARGUMENTS
 
 5. **Ask for the remaining config** in one question set: project name (default: folder name),
    `max_fix_attempts` (default 3), `pause_after_planning` (default true), `git_commit_per_story`
-   (default true).
+   (default true), and whether the project has a web UI to check with **visual QA**. If yes, also ask for
+   `visual_qa.ui_paths`, `base_url`, `start_command` and `design_refs`, keep the default viewports unless the
+   user changes them, and tell the user that visual QA needs the chrome-devtools-mcp plugin
+   (`/plugin marketplace add ChromeDevTools/chrome-devtools-mcp`, then
+   `/plugin install chrome-devtools-mcp@chrome-devtools-plugins`).
 
 6. **Scaffold.** Create these, using the template contents exactly:
    - `agentkit.yaml` from `templates/agentkit.yaml`, filled with the answers above;
@@ -41,6 +45,7 @@ Arguments (optional design doc paths): $ARGUMENTS
      `templates/agent-knowledge.md`;
    - `scrum/QUESTIONS.md` from `templates/questions.md`;
    - `scrum/reviews/` (with a `.gitkeep`);
+   - `scrum/visual-qa/` (with a `.gitkeep`) when visual QA is enabled;
    - `backlog/` (with a `.gitkeep`).
 
    Do NOT create BOARD.md or any story. `/agentkit:plan` does that.

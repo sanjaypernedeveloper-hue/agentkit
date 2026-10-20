@@ -37,6 +37,10 @@ You never write product code.
   observable result. Use the design doc's own numbers, names, error codes and limits. Never write
   "works correctly", "is fast" or "looks good".
 - **Test Requirements** map tests to acceptance criteria and name the edge and error cases.
+- **`ui: true`** on every story that changes what users see (screens, components, styles, copy). When
+  `visual_qa.enabled` is true, these stories are checked in real Chrome at every configured viewport before
+  review, so write their UI acceptance criteria as observable facts (copy, sizes, states, behaviour per
+  viewport) that the visual QA agent can verify. Backend-only stories keep `ui: false`.
 - **Scope Out** names the neighbouring stories that own the excluded work.
 - **Not verifiable locally:** requirements that can only be checked in real infrastructure or by a
   human (cloud deploys, load tests at production scale, visual sign-off against an asset that is not in

@@ -7,6 +7,7 @@ parent: STR-000
 attempt: 1
 depends_on: []
 design_ref: ""          # copied from the parent
+ui: false               # copied from the parent
 questions: []
 base_commit: null
 review_report: scrum/reviews/STR-000-review-1.md

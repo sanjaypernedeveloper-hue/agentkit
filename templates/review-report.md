@@ -36,6 +36,7 @@ One-paragraph reason.
 | Conventions followed (devResources/, Conventions & Decisions) | | |
 | No secrets or debug leftovers | | |
 | Knowledge log updated | | |
+| Visual QA: no open major findings (report: `visual-qa/STR-000-visual-<v>.md` or none) | | |
 
 ## Blocking gaps
 Only filled on FAIL. Each gap is tied to an AC or a failing command. These become the fix story.

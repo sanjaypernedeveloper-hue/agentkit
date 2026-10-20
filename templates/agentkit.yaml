@@ -20,3 +20,16 @@ workflow:
   pause_after_planning: true   # approve the story list before any dev starts
   git_commit_per_story: true   # dev commits "STR-001: <title>" when done
   max_files_per_story: 8       # scrum master splits stories that touch more files than this
+
+visual_qa:                     # optional: agent-visual-qa checks UI stories in real Chrome before review
+  enabled: false               # needs the chrome-devtools-mcp plugin (see README "Visual QA")
+  ui_paths: []                 # globs; a story whose diff touches any of these gets visual QA, e.g. ["apps/web/**"]
+  base_url: ""                 # where the app is served, e.g. http://localhost:5173
+  start_command: ""            # how to start the app if base_url is not answering, e.g. "pnpm dev"
+  viewports:                   # every check runs at each of these
+    - { name: iphone, width: 390, height: 844, mobile: true, dpr: 3 }
+    - { name: android, width: 412, height: 915, mobile: true, dpr: 2.625 }
+    - { name: laptop, width: 1280, height: 800, mobile: false, dpr: 1 }
+    - { name: desktop, width: 1440, height: 900, mobile: false, dpr: 1 }
+  design_refs: []              # files that show what "correct" looks like, e.g. [devResources/prototype.html]
+  max_rework: 2                # dev → visual QA rework loops before the story goes to review anyway
