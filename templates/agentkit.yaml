@@ -1,0 +1,22 @@
+# agentkit project config. Every project-specific value lives here (and in devResources/).
+project_name: ""
+
+paths:
+  dev_resources: devResources/                          # dev and reviewer load EVERY file in here
+  primary_design_doc: devResources/<doc>.md             # the doc stories are planned from
+  knowledge_log: devResources/agent-knowledge.md
+  scrum: scrum/
+  backlog: backlog/
+
+commands:            # run from the project root; leave "" if the project has none yet
+  install: ""
+  build: ""
+  lint: ""
+  typecheck: ""
+  test: ""           # the FULL suite; dev and reviewer both require it green
+
+workflow:
+  max_fix_attempts: 3          # fix stories .1, .2, .3, then backlog
+  pause_after_planning: true   # approve the story list before any dev starts
+  git_commit_per_story: true   # dev commits "STR-001: <title>" when done
+  max_files_per_story: 8       # scrum master splits stories that touch more files than this

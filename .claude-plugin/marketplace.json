@@ -1,0 +1,15 @@
+{
+  "name": "agentkit-marketplace",
+  "description": "agentkit: a reusable multi-agent plan/build/review workflow for Claude Code.",
+  "owner": {
+    "name": "sanjay.pernedeveloper",
+    "email": "sanjay.pernedeveloper@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "agentkit",
+      "source": "./",
+      "description": "Plan, build and review a project from a design doc, story by story."
+    }
+  ]
+}
