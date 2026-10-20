@@ -1,13 +1,16 @@
 ---
-description: Orchestrate stories through dev → review → fix. "next" (default) runs one story to completion, backlog or stop; "all" keeps going until nothing is runnable.
+description: Orchestrate stories through dev → visual QA (UI stories) → review → fix. "next" (default) runs one story to completion, backlog or stop; "all" keeps going until nothing is runnable.
 argument-hint: "[next|all]"
 ---
 
 # /agentkit:run: orchestrator
 
 You are the orchestrator, running in the MAIN session. You delegate all building to the
-**agentkit:agent-dev** subagent and all judging to the **agentkit:agent-reviewer** subagent. You never
-write product code or tests yourself, and you never review. You own BOARD.md and story status.
+**agentkit:agent-dev** subagent, the browser check of UI stories to the **agentkit:agent-visual-qa** subagent,
+and all judging to the **agentkit:agent-reviewer** subagent. You never write product code or tests yourself,
+and you never review or QA. You own BOARD.md and story status.
+
+Flow per story: **dev → visual QA (only when the story touches UI) → reviewer → (fix story → …)**.
 
 Mode: `$ARGUMENTS`. Empty or `next` means one story (including its fix loop) and then stop. `all` means
 keep going until nothing is runnable or a STOP condition fires.
@@ -39,8 +42,10 @@ Look for any story with status IN_PROGRESS or IN_REVIEW (including fix stories).
 silently restart it:
 - **IN_PROGRESS:** delegate to dev (step 4) with "This is a RESUME. Inspect `git status` and
   `git diff <base_commit>` and continue from the existing work."
+- **IN_VISUAL_QA:** if `<scrum>/visual-qa/<PARENT>-visual-<v>.md` for this run already exists, act on its
+  verdict (step 5.6). Otherwise run visual QA (step 5).
 - **IN_REVIEW:** if `<scrum>/reviews/<PARENT>-review-<k>.md` for this attempt already exists, act on its
-  verdict (step 6). Otherwise run the reviewer (step 5).
+  verdict (step 7). Otherwise run the reviewer (step 6).
 
 Tell the user which story is being resumed and from which state.
 
@@ -70,9 +75,42 @@ If nothing is runnable, go to the end-of-run summary.
 3. Read dev's summary:
    - `RESULT: BLOCKED`: STOP and ask the user (the story is wrong, impossible, or needs a question
      answered). Leave the story IN_PROGRESS with a Notes entry in BOARD.md.
-   - `RESULT: DONE`: continue to review.
+   - `RESULT: DONE`: continue to visual QA (step 5), or straight to review (step 6) when visual QA doesn't
+     apply.
 
-## 5. Review
+## 5. Visual QA (UI stories only)
+**When it applies:** `visual_qa.enabled` is true in agentkit.yaml AND either the story's front matter has
+`ui: true`, or `git diff --name-only <parent base_commit>` touches a path matching any glob in
+`visual_qa.ui_paths`. Otherwise skip to step 6 and pass `Visual QA report: none` to the reviewer.
+
+1. Set the story to IN_VISUAL_QA (front matter and BOARD.md) and append a Run log line.
+2. Work out the run number: v = (number of existing `<scrum>/visual-qa/<PARENT>-visual-*.md`) + 1.
+3. Take a snapshot before the run (snapshot helper).
+4. Delegate to **agentkit:agent-visual-qa** with:
+   ```
+   Project root: <cwd>
+   Story: <story path>
+   Parent story: <parent path (same as story for an original story)>
+   Visual QA run v: <v>
+   Diff base: <parent base_commit>
+   Templates directory: ${CLAUDE_PLUGIN_ROOT}/templates
+   Dev summary (a claim to verify, not evidence):
+   <dev summary>
+   ```
+5. Take a snapshot after the run and compare. Anything changed outside `<scrum>/` and `<backlog>/` makes the
+   run INVALID: STOP and show the user the changed paths. A run that produced no report is invalid too.
+6. **Act on the visual verdict** (read the report file, not just the message):
+   - **PASS:** continue to review (step 6) with `Visual QA report: <path>`.
+   - **SKIPPED** (the chrome-devtools-mcp plugin is missing): STOP and tell the user how to install it, or to set
+     `visual_qa.enabled: false`. Leave the story at IN_VISUAL_QA.
+   - **FAIL, and fewer than `visual_qa.max_rework` reworks have run for this story:** set the story back to
+     IN_PROGRESS, append a Run log line, and delegate to dev (step 4.2) with
+     `Visual QA report: <path>` and the instruction "Fix ONLY the major findings in the visual QA report; keep every
+     acceptance criterion passing." Then run visual QA again (v + 1).
+   - **FAIL after `visual_qa.max_rework` reworks:** continue to review anyway with `Visual QA report: <path>`. The
+     reviewer treats every open major finding as a blocking gap, so it lands in a fix story or the backlog.
+
+## 6. Review
 1. Set the story to IN_REVIEW (front matter and BOARD.md) and append a Run log line.
 2. Work out the review number: k = (number of existing `<scrum>/reviews/<PARENT>-review-*.md`) + 1.
    The diff base is the PARENT story's `base_commit`.
@@ -85,6 +123,7 @@ If nothing is runnable, go to the end-of-run summary.
    Review number k: <k>
    Diff base: <parent base_commit>
    Templates directory: ${CLAUDE_PLUGIN_ROOT}/templates
+   Visual QA report: <path of the latest visual QA report for this story> | none
    Dev summary (a claim to verify, not evidence):
    <dev summary>
    ```
@@ -92,7 +131,7 @@ If nothing is runnable, go to the end-of-run summary.
    `<scrum>/` and `<backlog>/` changed, the review is INVALID. STOP and show the user the changed paths. Do
    not revert them automatically. Treat a review that produced no report file as invalid too.
 
-## 6. Act on the verdict
+## 7. Act on the verdict
 Read the report file (not just the reviewer's message).
 
 - **PASS:**
@@ -104,7 +143,8 @@ Read the report file (not just the reviewer's message).
      `STR-00N: mark completed`.
 - **FAIL, and the reviewer created a fix story `STR-00N.k`:** add it to BOARD.md under the parent, with
   status TODO. Keep the failed story at IN_REVIEW and point Last review at the report. The fix story is
-  picked next (step 3.1), before any other story.
+  picked next (step 3.1), before any other story. A fix story goes through the same flow: dev → visual QA (if it
+  touches UI) → reviewer.
 - **FAIL, and the reviewer created a backlog story `BL-00N`:**
   1. Set the parent and all of its fix stories to BACKLOGGED.
   2. Find every story that depends on the parent, directly or transitively, and set each to BLOCKED,
@@ -116,7 +156,7 @@ Read the report file (not just the reviewer's message).
 Update BOARD.md (including the `updated` timestamp and a Run log line) after EVERY status change, not in
 a batch at the end.
 
-## 7. Loop
+## 8. Loop
 - `next`: stop after the picked story reaches COMPLETED or BACKLOGGED. Its fix stories are part of the
   same unit and run in the same invocation.
 - `all`: return to step 1 (pre-flight) and pick the next story.
@@ -128,11 +168,13 @@ a batch at the end.
   parent stories during this run. This points at an environment or foundation problem.
 - Any action would change the design docs in devResources/ (other than the knowledge log), or would
   contradict them.
-- The pre-flight suite is red, or a review was invalid (it touched source files).
+- The pre-flight suite is red, or a review or visual QA run was invalid (it touched source files).
+- Visual QA was SKIPPED because the chrome-devtools-mcp plugin is not installed.
 
 ## End-of-run summary
 Print:
-- **Completed** this run: ids and titles, with the number of attempts each took.
+- **Completed** this run: ids and titles, with the number of attempts each took, and the visual QA verdict
+  (with major/minor counts) for UI stories.
 - **Backlogged:** ids, with links to BL files and the suspected root cause.
 - **Blocked:** ids, with what blocks each.
 - **Open questions:** ids and one-liners.

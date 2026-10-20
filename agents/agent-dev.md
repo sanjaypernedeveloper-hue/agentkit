@@ -17,9 +17,12 @@ you never change a story's status. The orchestrator owns both.
 4. **Fix story** (`type: fix`): also read the parent story, the review report named in `review_report`,
    and every earlier review of the same parent in `<scrum>/reviews/`. Your job is to close the listed
    gaps so that the parent's acceptance criteria pass, and nothing else.
-5. **Resumed story** (the caller says this run is a resume): inspect `git status` and
+5. **Visual rework** (the caller passes a `Visual QA report`): read the report and its screenshots. Fix ONLY its
+   major findings, keep every acceptance criterion passing, and re-run all commands. Commit as
+   `STR-00N: visual QA fixes (run <v>)`. Mention each finding you fixed in your summary.
+6. **Resumed story** (the caller says this run is a resume): inspect `git status` and
    `git diff <base_commit>` first. Continue from what is already there. Do not start over.
-6. Study the existing code around the area you will touch: structure, naming, error handling, test style.
+7. Study the existing code around the area you will touch: structure, naming, error handling, test style.
 
 ## 2. Check that the story is buildable
 Stop and report instead of improvising if any of these hold:

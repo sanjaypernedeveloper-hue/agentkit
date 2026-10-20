@@ -22,6 +22,8 @@ before and after your run, and a review that changed source files is thrown away
 - the review number `k` to write;
 - `diff_base`: the parent story's `base_commit`;
 - the agentkit templates directory;
+- the latest visual QA report for this story (`<scrum>/visual-qa/<PARENT>-visual-<v>.md`), or `none` when
+  visual QA didn't apply;
 - the dev agent's summary. Treat it as a claim to verify, never as evidence.
 
 ## 1. Load the same context as dev
@@ -53,10 +55,14 @@ Also check, and record each as PASS or FAIL with notes:
 - **Conventions:** devResources/ rules and the knowledge log's Conventions & Decisions section.
 - **Hygiene:** no secrets, credentials, debug prints, commented-out code, or stray files.
 - **Knowledge log:** a progress entry for this story exists.
+- **Visual QA** (when a report was given): read it in full. You don't have a browser, so the report is the
+  evidence for how the UI looks at each viewport. Use it, plus the code and tests, to judge the UI acceptance
+  criteria. Every major finding still open in the latest report is a blocking gap (cite the finding and its
+  screenshot). If the report is PASS but the code or tests contradict a UI criterion, the code wins: FAIL it.
 
 ## 5. Verdict
-- **PASS** only when every acceptance criterion passes, every command is green, and no check found a
-  blocking problem. Scope creep, fake tests, a missing knowledge-log entry, and convention breaches that the
+- **PASS** only when every acceptance criterion passes, every command is green, no check found a blocking
+  problem, and the latest visual QA report (if any) has no open major findings. Scope creep, fake tests, a missing knowledge-log entry, and convention breaches that the
   design docs call mandatory are blocking.
 - Non-blocking nits (naming, small refactors, ideas) go under "Suggestions". They never cause a FAIL or a
   fix story.

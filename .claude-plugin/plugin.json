@@ -1,11 +1,11 @@
 {
   "name": "agentkit",
-  "version": "0.1.0",
-  "description": "Multi-agent dev workflow: a scrum master plans stories from your design docs, then a dev agent builds and a reviewer agent verifies them, one story at a time, with automatic fix stories and a backlog.",
+  "version": "0.2.0",
+  "description": "Multi-agent dev workflow: a scrum master plans stories from your design docs, then a dev agent builds, a visual QA agent checks UI stories in real Chrome at phone and laptop sizes, and a reviewer agent verifies them, one story at a time, with automatic fix stories and a backlog.",
   "author": {
     "name": "sanjay.pernedeveloper",
     "email": "sanjay.pernedeveloper@gmail.com"
   },
   "license": "MIT",
-  "keywords": ["workflow", "scrum", "agents", "code-review", "stories"]
+  "keywords": ["workflow", "scrum", "agents", "code-review", "stories", "visual-qa", "chrome-devtools"]
 }
