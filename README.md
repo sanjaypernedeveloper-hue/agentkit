@@ -32,8 +32,29 @@ For example, `/plugin marketplace add github.com/<you>/agentkit` or `/plugin mar
 /agentkit:plan                      # scrum master writes stories; you review and approve
 /agentkit:run next                  # one story: dev → visual QA* → review → (fix → …)* → completed or backlog
 /agentkit:run all                   # keep going until nothing is runnable or something needs you
+/agentkit:loop                      # like `all`, but a FRESH headless session per story (scripts/run-loop.sh)
 /agentkit:status                    # board summary
 ```
+
+Subagents run on the models in `agentkit.yaml` → `models` (default `sonnet`, dev escalating to `opus` after
+2 failed reviews), whatever model your main session uses.
+
+## Fresh session per story (`/agentkit:loop`)
+
+`/agentkit:run all` keeps one orchestrator session for every story, so its context grows. `scripts/run-loop.sh`
+instead runs `claude -p "/agentkit:run next unattended"` once per story, each in a new session on
+`models.orchestrator`. `/agentkit:loop` prints the exact command for your install:
+
+```bash
+bash ~/.claude/plugins/cache/agentkit-marketplace/agentkit/<version>/scripts/run-loop.sh [max_stories]
+```
+
+- It stops when a run changes neither HEAD nor BOARD.md (a STOP condition, an open question, or nothing left).
+- In unattended mode the orchestrator never waits for you. It writes STOP reasons at the top of
+  `scrum/RUN-NOTES-<date>.md`, and a recap there after each story.
+- It waits out usage limits (`LIMIT_WAIT_SECONDS`, default 1800) and keeps a Mac awake (`caffeinate`).
+- `PERMISSION_MODE` (default `auto`) sets each session's permission mode. Logs go to `scrum/run-logs/`
+  (gitignore it). Each session's full transcript is under `claude --resume`.
 
 ## Story lifecycle
 
@@ -140,6 +161,10 @@ To answer a question, write the answer in `scrum/QUESTIONS.md`, set its status t
 | `workflow.pause_after_planning` | `true` | `/agentkit:run` refuses to start until you approve the plan |
 | `workflow.git_commit_per_story` | `true` | Dev commits `STR-001: <title>` |
 | `workflow.max_files_per_story` | `8` | The scrum master splits stories that touch more files than this |
+| `workflow.playbook` | `""` | Optional project file read by `/agentkit:run` first, with project-specific additions |
+| `models.dev/reviewer/visual_qa/scrum_master` | `sonnet` | Model passed on each subagent call. `inherit`, empty or a missing `models` section uses the session model |
+| `models.orchestrator` | `sonnet` | Model for each fresh session started by `/agentkit:loop` |
+| `models.escalate_dev_to` / `escalate_after_failed_reviews` | `opus` / `2` | Dev switches model once a story has failed review this many times (`""` = never) |
 | `visual_qa.enabled` | `false` | Run agent-visual-qa on UI stories between dev and review |
 | `visual_qa.ui_paths` | `[]` | Globs; a story whose diff touches one of these is a UI story (also `ui: true` in a story) |
 | `visual_qa.base_url` / `start_command` | none | Where the app runs, and how to start it if it isn't running |
@@ -159,8 +184,8 @@ git is required, because the reviewer diffs each story against the base commit r
   orchestrator parses it.
 - **Fork the plugin:** edit `agents/*.md` (prompts, `tools`, `model`), `commands/*.md` (workflow) or
   `templates/*` (story, report and board formats). Bump `version` in `.claude-plugin/plugin.json`.
-- **Model per agent:** set `model:` in an agent's front matter (for example `sonnet` for dev and `opus` for
-  the reviewer). The default `inherit` uses your session model.
+- **Model per agent:** set `models` in the project's `agentkit.yaml` (see the config reference). The agents'
+  own front matter stays `inherit`, and the orchestrator passes the configured model on every call.
 
 ## Test locally
 
@@ -168,8 +193,8 @@ git is required, because the reviewer diffs each story against the base commit r
 claude --plugin-dir /path/to/agentkit
 ```
 
-Then run `/help` and check that `/agentkit:init`, `/agentkit:plan`, `/agentkit:run` and `/agentkit:status`
-are listed, and that `/agents` shows the four agentkit agents. For an end-to-end smoke test:
+Then run `/help` and check that `/agentkit:init`, `/agentkit:plan`, `/agentkit:run`, `/agentkit:loop` and
+`/agentkit:status` are listed, and that `/agents` shows the four agentkit agents. For an end-to-end smoke test:
 
 ```bash
 mkdir /tmp/tconv && cd /tmp/tconv && git init
@@ -186,9 +211,10 @@ Validate the manifests with `claude plugin validate /path/to/agentkit`.
 .claude-plugin/plugin.json       manifest
 .claude-plugin/marketplace.json  single-plugin marketplace
 agents/                          scrum master, dev, visual QA, reviewer
-commands/                        init, plan, run (orchestrator), status
+commands/                        init, plan, run (orchestrator), loop, status
 templates/                       agentkit.yaml, story, fix-story, backlog-story, review-report, visual-qa-report, board, questions, agent-knowledge
 scripts/detect-commands.sh       suggests commands from package.json, pyproject, Cargo, go.mod, Makefile
 scripts/snapshot.sh              working-tree fingerprint, used to prove the review was read-only
+scripts/run-loop.sh              fresh headless session per story (/agentkit:loop)
 examples/tiny-design.md          small design doc for smoke tests
 ```

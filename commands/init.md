@@ -33,7 +33,9 @@ Arguments (optional design doc paths): $ARGUMENTS
 
 5. **Ask for the remaining config** in one question set: project name (default: folder name),
    `max_fix_attempts` (default 3), `pause_after_planning` (default true), `git_commit_per_story`
-   (default true), and whether the project has a web UI to check with **visual QA**. If yes, also ask for
+   (default true), the subagent **models** (default `sonnet` for dev, reviewer, visual QA, scrum master and
+   the loop orchestrator, with dev escalating to `opus` after 2 failed reviews; `inherit` uses the session
+   model), and whether the project has a web UI to check with **visual QA**. If yes, also ask for
    `visual_qa.ui_paths`, `base_url`, `start_command` and `design_refs`, keep the default viewports unless the
    user changes them, and tell the user that visual QA needs the chrome-devtools-mcp plugin
    (`/plugin marketplace add ChromeDevTools/chrome-devtools-mcp`, then
@@ -46,9 +48,11 @@ Arguments (optional design doc paths): $ARGUMENTS
    - `scrum/QUESTIONS.md` from `templates/questions.md`;
    - `scrum/reviews/` (with a `.gitkeep`);
    - `scrum/visual-qa/` (with a `.gitkeep`) when visual QA is enabled;
-   - `backlog/` (with a `.gitkeep`).
+   - `backlog/` (with a `.gitkeep`);
+   - a `<scrum>/run-logs/` line in `.gitignore` (create the file if needed), for `/agentkit:loop` logs.
 
    Do NOT create BOARD.md or any story. `/agentkit:plan` does that.
 
 7. **Report.** Print the final agentkit.yaml and the created tree, then tell the user the next step:
-   `/agentkit:plan`. Do not start planning yourself.
+   `/agentkit:plan`, then `/agentkit:run next` (one story here) or `/agentkit:loop` (a fresh session per
+   story). Do not start planning yourself.

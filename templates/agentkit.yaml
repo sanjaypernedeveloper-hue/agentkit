@@ -20,6 +20,16 @@ workflow:
   pause_after_planning: true   # approve the story list before any dev starts
   git_commit_per_story: true   # dev commits "STR-001: <title>" when done
   max_files_per_story: 8       # scrum master splits stories that touch more files than this
+  playbook: ""                 # optional project file (e.g. scripts/agentkit/PLAYBOOK.md) that adds to /agentkit:run
+
+models:                        # the Agent tool's model override per subagent; "inherit" = the main session's model
+  dev: sonnet
+  reviewer: sonnet
+  visual_qa: sonnet
+  scrum_master: sonnet
+  orchestrator: sonnet         # each fresh headless session started by /agentkit:loop (scripts/run-loop.sh)
+  escalate_dev_to: opus        # model for dev once a story has failed review this many times ("" = never)
+  escalate_after_failed_reviews: 2
 
 visual_qa:                     # optional: agent-visual-qa checks UI stories in real Chrome before review
   enabled: false               # needs the chrome-devtools-mcp plugin (see README "Visual QA")
