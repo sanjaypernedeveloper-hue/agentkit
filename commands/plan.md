@@ -11,8 +11,9 @@ The agentkit plugin root is `${CLAUDE_PLUGIN_ROOT}`. Templates are in `${CLAUDE_
 
 2. Check that `paths.primary_design_doc` exists. If it does not, stop and say so.
 
-3. Delegate to the **agent-scrum-master** subagent (the plugin agent `agentkit:agent-scrum-master`)
-   with this prompt, filling in the placeholders:
+3. Delegate to the **agent-scrum-master** subagent (the plugin agent `agentkit:agent-scrum-master`),
+   passing the Agent tool's `model` as `models.scrum_master` from agentkit.yaml (omit it when that is
+   `inherit`, empty or missing), with this prompt, filling in the placeholders:
    ```
    Project root: <absolute cwd>
    Config: agentkit.yaml

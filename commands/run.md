@@ -1,6 +1,6 @@
 ---
-description: Orchestrate stories through dev → visual QA (UI stories) → review → fix. "next" (default) runs one story to completion, backlog or stop; "all" keeps going until nothing is runnable.
-argument-hint: "[next|all]"
+description: Orchestrate stories through dev → visual QA (UI stories) → review → fix. "next" (default) runs one story to completion, backlog or stop; "all" keeps going until nothing is runnable; add "unattended" for headless runs.
+argument-hint: "[next|all] [unattended]"
 ---
 
 # /agentkit:run: orchestrator
@@ -13,7 +13,24 @@ and you never review or QA. You own BOARD.md and story status.
 Flow per story: **dev → visual QA (only when the story touches UI) → reviewer → (fix story → …)**.
 
 Mode: `$ARGUMENTS`. Empty or `next` means one story (including its fix loop) and then stop. `all` means
-keep going until nothing is runnable or a STOP condition fires.
+keep going until nothing is runnable or a STOP condition fires. If the user wants several stories each in a
+fresh session (so this session's context doesn't pile up), point them to `/agentkit:loop`.
+
+**Unattended** (the arguments contain `unattended`, as `scripts/run-loop.sh` passes): nobody is watching.
+Never wait for a reply or a "go". On a STOP condition, write it with the question or the failing output at
+the top of `<scrum>/RUN-NOTES-<YYYY-MM-DD>.md`, leave the board consistent, and end. After each COMPLETED or
+BACKLOGGED story, append a short plain-language recap to that file: what was built, the checks and verdicts,
+and anything worth the user's look.
+
+**Models.** Pass the Agent tool's `model` parameter on every delegation from `models` in agentkit.yaml:
+`models.dev` for dev, `models.visual_qa` for visual QA and `models.reviewer` for the reviewer. Omit the
+parameter when the value is `inherit` or empty, or when agentkit.yaml has no `models` section. When a story
+(counting its fix stories) has already failed review `models.escalate_after_failed_reviews` times, use
+`models.escalate_dev_to` for dev instead, if it is set.
+
+**Playbook.** If `workflow.playbook` names a file, read it before step 0. It holds project-specific additions
+to this command (helpers, budgets, habits). Where it differs from this file, the playbook wins, except that it
+can never relax a STOP condition about source changes made by a review or visual QA run.
 
 Plugin root: `${CLAUDE_PLUGIN_ROOT}`. Templates: `${CLAUDE_PLUGIN_ROOT}/templates`.
 Snapshot helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/snapshot.sh" <scrum> <backlog>`.
@@ -63,7 +80,7 @@ If nothing is runnable, go to the end-of-run summary.
 1. Set the story to IN_PROGRESS, in both its front matter and BOARD.md. Record
    `base_commit: <git rev-parse HEAD>` in the story's front matter. Keep an existing base_commit when
    resuming. Append a Run log line.
-2. Delegate to **agentkit:agent-dev** with:
+2. Delegate to **agentkit:agent-dev** (model: `models.dev`, or `models.escalate_dev_to` when escalated) with:
    ```
    Project root: <cwd>
    Story: <story path>
@@ -86,7 +103,7 @@ If nothing is runnable, go to the end-of-run summary.
 1. Set the story to IN_VISUAL_QA (front matter and BOARD.md) and append a Run log line.
 2. Work out the run number: v = (number of existing `<scrum>/visual-qa/<PARENT>-visual-*.md`) + 1.
 3. Take a snapshot before the run (snapshot helper).
-4. Delegate to **agentkit:agent-visual-qa** with:
+4. Delegate to **agentkit:agent-visual-qa** (model: `models.visual_qa`) with:
    ```
    Project root: <cwd>
    Story: <story path>
@@ -115,7 +132,7 @@ If nothing is runnable, go to the end-of-run summary.
 2. Work out the review number: k = (number of existing `<scrum>/reviews/<PARENT>-review-*.md`) + 1.
    The diff base is the PARENT story's `base_commit`.
 3. Take a snapshot before the review: run the snapshot helper and keep its output.
-4. Delegate to **agentkit:agent-reviewer** with:
+4. Delegate to **agentkit:agent-reviewer** (model: `models.reviewer`) with:
    ```
    Project root: <cwd>
    Story under review: <story path>
@@ -179,4 +196,5 @@ Print:
 - **Blocked:** ids, with what blocks each.
 - **Open questions:** ids and one-liners.
 - **Next:** the story `/agentkit:run next` would pick now.
+- **Models** used for dev, visual QA and the reviewer (including any escalation).
 - **Suggested next steps**, such as answering Q-00N, splitting BL-00N, or filling in agentkit.yaml commands.
