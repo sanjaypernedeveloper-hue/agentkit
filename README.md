@@ -55,6 +55,27 @@ bash ~/.claude/plugins/cache/agentkit-marketplace/agentkit/<version>/scripts/run
 - It waits out usage limits (`LIMIT_WAIT_SECONDS`, default 1800) and keeps a Mac awake (`caffeinate`).
 - `PERMISSION_MODE` (default `auto`) sets each session's permission mode. Logs go to `scrum/run-logs/`
   (gitignore it). Each session's full transcript is under `claude --resume`.
+- `PRIORITY="STR-012 STR-009"` puts those TODO stories first, in that order, once nothing is in flight.
+- Before every session it frees `commands.test_ports` (see below), so a server left behind by a killed run
+  can't make the next story's tests fail at start-up.
+- Follow it live with `python3 <plugin>/scripts/watch-loop.py` (orchestrator, dev, visual QA and reviewer
+  steps as they happen; read-only).
+
+## Helper scripts
+
+The orchestrator uses these, and you can run them yourself from the project root:
+
+- `scripts/board.py status STR-004 TODO IN_PROGRESS "dev start"`: one status change, in the story's front
+  matter and BOARD.md, with the `updated` stamp, the Run log line and `base_commit`. It refuses when the
+  story is not at the stated status.
+- `scripts/board.py complete STR-004 2`: after review 2 passed. Marks the story and its fix stories
+  COMPLETED, renames them `COMPLETED-…` (into `paths.completed`, and `sprint-<n>/` when BOARD.md has
+  `current_sprint: <n>`), updates the knowledge log, writes the time report and commits only that story's files.
+- `scripts/free-ports.sh`: stops servers that a killed run left on `commands.test_ports`. Only processes
+  running from this repo are touched; anything else on a port is reported and left alone.
+- `node scripts/time-report.mjs STR-004 | --all`: where each story's agent time went (coding, thinking,
+  unit tests, e2e tests, build, lint, env setup, browser QA, git, paused), from the Claude Code transcripts,
+  into `scrum/time/`.
 
 ## Story lifecycle
 
@@ -216,5 +237,9 @@ templates/                       agentkit.yaml, story, fix-story, backlog-story,
 scripts/detect-commands.sh       suggests commands from package.json, pyproject, Cargo, go.mod, Makefile
 scripts/snapshot.sh              working-tree fingerprint, used to prove the review was read-only
 scripts/run-loop.sh              fresh headless session per story (/agentkit:loop)
+scripts/watch-loop.py            live feed of a running loop and its subagents
+scripts/board.py                 status changes and story completion (BOARD.md, front matter, Run log)
+scripts/free-ports.sh            frees commands.test_ports of leftover servers from this repo
+scripts/time-report.mjs          agent time per story from the transcripts
 examples/tiny-design.md          small design doc for smoke tests
 ```
