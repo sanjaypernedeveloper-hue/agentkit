@@ -7,6 +7,8 @@ paths:
   knowledge_log: devResources/agent-knowledge.md
   scrum: scrum/
   backlog: backlog/
+  completed: ""                                         # optional: move completed stories here (e.g. scrum/completed/);
+                                                        # into sprint-<n>/ when BOARD.md has current_sprint: <n>
 
 commands:            # run from the project root; leave "" if the project has none yet
   install: ""
@@ -14,6 +16,8 @@ commands:            # run from the project root; leave "" if the project has no
   lint: ""
   typecheck: ""
   test: ""           # the FULL suite; dev and reviewer both require it green
+  test_ports: []     # ports the test commands' servers listen on, e.g. [4173, 3900]: leftovers from a killed run
+                     # (this repo's processes only) are stopped before each loop session and each test run
 
 workflow:
   max_fix_attempts: 3          # fix stories .1, .2, .3, then backlog

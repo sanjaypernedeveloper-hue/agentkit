@@ -7,7 +7,10 @@
 #   /agentkit:loop prints the exact path for your install.
 # env:   PERMISSION_MODE   (default auto)   permission mode for each headless session
 #        LIMIT_WAIT_SECONDS (default 1800)  sleep after a usage-limit message, then resume
-# reads: agentkit.yaml models.orchestrator (default sonnet) and paths.scrum (default scrum/)
+#        PRIORITY           e.g. "STR-012 STR-009": once nothing is in flight, these TODO stories go first, in
+#                           this order, before the lowest-id rule
+# reads: agentkit.yaml models.orchestrator (default sonnet), paths.scrum (default scrum/) and commands.test_ports
+#        (freed of leftover servers from this repo before every session, see free-ports.sh)
 # logs:  <scrum>/run-logs/<timestamp>-<n>.log  (add it to .gitignore)
 set -u
 
@@ -41,25 +44,39 @@ if command -v caffeinate >/dev/null; then caffeinate -i -s -w $$ & fi   # keep a
 checksum() { if command -v md5 >/dev/null; then md5 -q "$1"; else md5sum "$1" | cut -d' ' -f1; fi; }
 state() { echo "$(git rev-parse HEAD) $(checksum "$SCRUM/BOARD.md")"; }
 
-echo "run-loop: orchestrator model $MODEL, permission mode $PERMISSION_MODE, up to $MAX run(s)"
+PROMPT="/agentkit:run next unattended"
+if [ -n "${PRIORITY:-}" ]; then
+  PROMPT="$PROMPT
+Product owner's priority: first finish any story already in progress (IN_PROGRESS, IN_VISUAL_QA, IN_REVIEW) and its
+fix stories. Then, when picking a new story, pick the first of these that is TODO and runnable before any other TODO
+story: $PRIORITY. When none of them is TODO, use the normal lowest-id rule."
+fi
+HERE=$(cd "$(dirname "$0")" && pwd)
+
+echo "run-loop: orchestrator model $MODEL, permission mode $PERMISSION_MODE, up to $MAX run(s)${PRIORITY:+, priority $PRIORITY}"
 n=0
 while [ "$n" -lt "$MAX" ]; do
   n=$((n + 1))
   before=$(state)
   log="$LOG_DIR/$(date +%Y%m%d-%H%M%S)-$n.log"
   echo "[$(date '+%H:%M')] run $n (fresh session) -> $log"
-  claude -p "/agentkit:run next unattended" --model "$MODEL" --permission-mode "$PERMISSION_MODE" > "$log" 2>&1
+  # A session killed mid-test leaves its servers holding their ports; free them before the next one starts.
+  bash "$HERE/free-ports.sh" | sed "s/^/[$(date '+%H:%M')] /"
+  # No ceiling on how long -p waits for background work, so a long subagent is never cut off mid-story.
+  CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0 claude -p "$PROMPT" --model "$MODEL" --permission-mode "$PERMISSION_MODE" > "$log" 2>&1
   code=$?
 
-  if grep -qiE "session limit|usage limit|rate.?limit|429" "$log"; then
+  [ "$(state)" != "$before" ] && continue   # progress: on to the next story
+
+  # No progress. A usage limit (matched only on Claude's own limit messages, so a story that mentions
+  # rate limits cannot trigger it) means wait and resume; anything else means stop.
+  if grep -qiE "(usage|session|weekly|5-hour) limit (reached|hit)|hit your ([a-z0-9-]+ )?limit|limit (reached )?[^a-z]{0,6}resets" "$log"; then
     echo "[$(date '+%H:%M')] usage limit hit; sleeping ${LIMIT_WAIT_SECONDS}s, then resuming"
     sleep "$LIMIT_WAIT_SECONDS"
     continue                      # the next run resumes the interrupted story
   fi
 
-  if [ "$(state)" = "$before" ]; then
-    echo "[$(date '+%H:%M')] no progress (exit $code), stopping. See $log and $SCRUM/RUN-NOTES-*.md"
-    break
-  fi
+  echo "[$(date '+%H:%M')] no progress (exit $code), stopping. See $log and $SCRUM/RUN-NOTES-*.md"
+  break
 done
 echo "run-loop: done after $n run(s). Board: $SCRUM/BOARD.md"

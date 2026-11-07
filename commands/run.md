@@ -20,7 +20,9 @@ fresh session (so this session's context doesn't pile up), point them to `/agent
 Never wait for a reply or a "go". On a STOP condition, write it with the question or the failing output at
 the top of `<scrum>/RUN-NOTES-<YYYY-MM-DD>.md`, leave the board consistent, and end. After each COMPLETED or
 BACKLOGGED story, append a short plain-language recap to that file: what was built, the checks and verdicts,
-and anything worth the user's look.
+and anything worth the user's look. Run every Agent call (dev, visual QA, reviewer) with
+`run_in_background: false` and every long Bash command (tests, builds) in the foreground: a headless session
+that ends its turn while work runs in the background gets that work killed.
 
 **Models.** Pass the Agent tool's `model` parameter on every delegation from `models` in agentkit.yaml:
 `models.dev` for dev, `models.visual_qa` for visual QA and `models.reviewer` for the reviewer. Omit the
@@ -34,6 +36,15 @@ can never relax a STOP condition about source changes made by a review or visual
 
 Plugin root: `${CLAUDE_PLUGIN_ROOT}`. Templates: `${CLAUDE_PLUGIN_ROOT}/templates`.
 Snapshot helper: `bash "${CLAUDE_PLUGIN_ROOT}/scripts/snapshot.sh" <scrum> <backlog>`.
+Board helper (use it for the bookkeeping below; it does exactly what the steps describe, in one command):
+- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/board.py" status <id> <FROM> <TO> "<reason>"` for every status change
+  (front matter, BOARD.md row, `updated`, Run log line, and `base_commit` on the first IN_PROGRESS).
+- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/board.py" complete <PARENT> <k>` for step 7 PASS.
+If it refuses (the story is not at FROM, no PASS verdict), the board and the files disagree: find out why and
+fix the record by hand. Never edit around a refusal to force a transition.
+Port helper: when `commands.test_ports` is set, run `bash "${CLAUDE_PLUGIN_ROOT}/scripts/free-ports.sh"` before
+the pre-flight suite and before every dev, visual QA and reviewer delegation. It stops only this repo's servers
+that a killed earlier run left on those ports. Never run it while a test run is still going.
 
 ## 0. Preconditions (stop with a clear message if any fail)
 - `agentkit.yaml` exists. Read it, and use its paths and commands everywhere below.
